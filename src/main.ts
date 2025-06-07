@@ -1,9 +1,13 @@
+// src/main.ts
+
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';   // ①
 import { AppModule } from './app.module';
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
 import * as fs from 'fs';
 import * as path from 'path';
+import { join } from 'path';                                        // ②
 
 dotenv.config();
 
@@ -28,7 +32,7 @@ async function bootstrap() {
     port: DB_PORT,
     username: process.env.DB_USERNAME,
     password: process.env.DB_PASSWORD,
-    database: 'mysql',    // Conectar a la DB por defecto para crear lazarusdb
+    database: 'mysql',
   });
   await tmpDataSource.initialize();
   await tmpDataSource.query(
@@ -36,14 +40,19 @@ async function bootstrap() {
   );
   await tmpDataSource.destroy();
 
-  // Arrancar NestJS
-  const app = await NestFactory.create(AppModule);
+  // Arrancar NestJS **como NestExpressApplication** ✱
+  const app = await NestFactory.create<NestExpressApplication>(AppModule); // ③
 
   // Habilitar CORS
   app.enableCors({
-    origin: 'http://localhost:16063',  // tu origen del frontend
+    origin: '*',
     methods: ['GET','HEAD','PUT','PATCH','POST','DELETE','OPTIONS'],
     credentials: true,
+  });
+
+  // Exponer la carpeta uploads en '/uploads'
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
   });
 
   await app.listen(3000);
